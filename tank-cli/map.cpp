@@ -1,6 +1,7 @@
 #include <print>
 #include <random>
 #include <ranges>
+#include <tank-cli/entity.hpp>
 #include <tank-cli/map.hpp>
 #include <tank-cli/motion.hpp>
 #include <tank-cli/player.hpp>
@@ -10,8 +11,8 @@
 Map::Map(int width, int height)
     : width_(width), height_(height),
       terrain_(width, std::vector<Terrain>(height, Terrain::movable)),
-      is_x_axis_(width, std::vector<bool>(height, false)),
-      tank_radius_(std::max(height, width) / 30), bullet_radius_(0)
+      is_x_axis_(width, std::vector<bool>(height, false)), tank_radius_(1),
+      bullet_radius_(0)
 {
 }
 
@@ -214,6 +215,12 @@ void Map::update(float dt)
         }
         it->position += it->direction * it->velocity * dt;
 
+        it->remaining -= dt * it->velocity;
+        if (it->remaining <= 0) {
+            it = bullets_.erase(it);
+            continue;
+        }
+
         if (auto jt = std::ranges::find_if( // Collide with tank
                 players_,
                 [it, this](auto const &player) {
@@ -263,21 +270,20 @@ bool Map::is_valid(glm::vec3 pos) const
 //     }
 // }
 void Map::render(
-    Shader_program &normal, Shader_program &player_shader,
-    std::function<void(Shader_program &, Player const &, bool)> const
-        &render_func,
+    Shader_program &shader, Shader_program &player_shader,
+    std::function<void(Shader_program &, Player const &)> const &render_fn,
     std::function<void(Shader_program &, Bullet)> const &render_bullet,
     std::function<void(Barrier const &)> const &render_barrier)
 {
     if (!players_.empty()) {
-        render_func(player_shader, players_.front(), false);
+        render_fn(player_shader, players_.front());
     }
     for (auto const &p : players_ | std::views::drop(1)) {
-        render_func(normal, p, false);
+        render_fn(player_shader, p);
     }
 
     for (auto const &b : bullets_) {
-        render_bullet(normal, b);
+        render_bullet(shader, b);
     }
 
     for (auto const &b : barriers_) {

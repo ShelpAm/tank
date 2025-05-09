@@ -4,10 +4,10 @@
 #include <list>
 #include <spdlog/spdlog.h>
 #include <tank-cli/bullet.hpp>
+#include <tank-cli/player.hpp>
 #include <vector>
 
 class Shader_program;
-class Player;
 
 struct Line {
     glm::ivec2 start;
@@ -28,12 +28,11 @@ class Map {
     Map(int height, int width);
 
     void update(float dt);
-    void
-    render(Shader_program &, Shader_program &,
-           std::function<void(Shader_program &, Player const &, bool)> const
-               &render_func,
-           std::function<void(Shader_program &, Bullet)> const &render_bullet,
-           std::function<void(Barrier const &)> const &render_barrier);
+    void render(
+        Shader_program &, Shader_program &,
+        std::function<void(Shader_program &, Player const &)> const &render_fn,
+        std::function<void(Shader_program &, Bullet)> const &render_bullet,
+        std::function<void(Barrier const &)> const &render_barrier);
 
     void add_barrier(Barrier barrier);
     void add_bullet(Bullet bullet);

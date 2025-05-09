@@ -38,7 +38,6 @@ class Window {
 
     std::vector<Event> take_events()
     {
-        poll_events();
         return std::exchange(events_, {});
     }
 
@@ -85,7 +84,6 @@ class Window {
     void pre_render()
     {
         use_window();
-        glEnable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
     void on_render()
@@ -97,5 +95,6 @@ class Window {
     void post_render()
     {
         glfwSwapBuffers(window_);
+        poll_events();
     }
 };

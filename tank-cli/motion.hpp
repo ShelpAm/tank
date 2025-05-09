@@ -16,7 +16,8 @@ class Motion {
 
     void consume(Player &p, float dt)
     {
-        elapsed_ += Durationf(dt);
+        auto slice = std::min(Durationf(dt), total_time_ - elapsed_);
+        elapsed_ += slice;
         spdlog::debug("motion:: Motion elapsed_: {}, dt: {}", elapsed_.count(),
                       Durationf(dt).count());
         apply(p, dt);

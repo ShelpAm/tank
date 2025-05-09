@@ -33,6 +33,7 @@ void main() {
 
     // Convert to RGB
     vec3 rgb = hsv2rgb(vec3(hue, 1.0, 1.0));
+    // rgb.xyz = vec3(time); // TODO for test
     FragColor = vec4(rgb, 1.0);
 }
 

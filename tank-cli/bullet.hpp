@@ -7,4 +7,5 @@ struct Bullet {
     glm::vec3 direction;
     glm::vec3 position;
     float velocity;
+    float remaining;
 };

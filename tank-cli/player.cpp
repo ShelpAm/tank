@@ -28,7 +28,8 @@ void Player::fire() const
                   .position =
                       position_ +
                       static_cast<float>(map_->tank_radius_) * direction(),
-                  .velocity = 10};
+                  .velocity = 30,
+                  .remaining = 140};
     map_->add_bullet(bullet);
 }
 void Player::turn(float dt)
