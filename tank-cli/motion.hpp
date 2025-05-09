@@ -17,14 +17,14 @@ class Motion {
     void consume(Player &p, float dt)
     {
         elapsed_ += Durationf(dt);
-        spdlog::debug("Motion elapsed_: {}, dt: {}", elapsed_.count(),
+        spdlog::debug("motion:: Motion elapsed_: {}, dt: {}", elapsed_.count(),
                       Durationf(dt).count());
         apply(p, dt);
     }
 
     [[nodiscard]] bool is_ended() const
     {
-        spdlog::debug("Motion is_ended: {}", elapsed_ >= total_time_);
+        spdlog::debug("motions:: Motion is_ended: {}", elapsed_ >= total_time_);
         return elapsed_ >= total_time_;
     }
 
@@ -82,10 +82,10 @@ template <typename Motion_type> class Motion_sequence {
             return;
         }
 
-        auto &front = motion_queue_.front();
-        front.consume(p, dt);
+        auto &motion = motion_queue_.front();
+        motion.consume(p, dt);
 
-        if (front.is_ended()) {
+        if (motion.is_ended()) {
             motion_queue_.pop();
         }
     }

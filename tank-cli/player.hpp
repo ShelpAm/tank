@@ -11,40 +11,40 @@ class Player {
     friend class Map;
 
   public:
-    Player(std::string name, glm::vec2 position, float direction, Map *map);
+    Player(std::string name, glm::vec3 position, float direction, Map *map);
 
-    void set_velocity(float velocity)
-    {
-        velocity_ = velocity;
-    }
+    void render() const {}
 
     void update(float dt)
     {
         motion_sequence_uniform_.consume(*this, dt);
         motion_sequence_turn_.consume(*this, dt);
-        static float elapse{};
-        elapse += dt;
-        if (elapse >= 1) {
-            shot();
-            elapse = 0;
+        last_fire_elapsed_ += dt;
+        if (last_fire_elapsed_ >= 1 && should_fire_) {
+            fire();
+            last_fire_elapsed_ = 0;
         }
+
+        move(dt);
+        turn(dt);
         // move(dt);
         // shot();
     }
 
     // Positive clockwise, negative anti-clockwise
-    void turn(float radians)
-    {
-        direction_ += radians;
-    }
+    void turn(float dt);
 
     // Returns true if collide with others.
     bool move(float dt);
 
     // To current direction
-    void shot() const;
+    void fire() const;
 
-    void display_velocity() const
+    void set_velocity(float velocity);
+    void set_rotation_speed(float rotation_speed);
+    void set_should_fire(bool value);
+
+    [[deprecated]] void display_velocity() const
     {
         constexpr int radius = 10;             // 绘制半径
         constexpr int size = (radius * 2) + 1; // 缓冲区大小
@@ -110,15 +110,20 @@ class Player {
         }
     }
 
-    [[nodiscard]] glm::ivec2 position() const
+    [[nodiscard]] glm::ivec2 iposition2() const
     {
-        return {static_cast<int>(position_.x), static_cast<int>(position_.y)};
+        return {static_cast<int>(position_.x), static_cast<int>(position_.z)};
     }
 
-    void report_state() const
+    [[nodiscard]] glm::vec2 position2() const
     {
-        spdlog::info("player {} is at {} {}, velocity: {}, direction_: {}",
-                     name_, position_.x, position_.y, velocity_, direction_);
+        return {position_.x, position_.z};
+    }
+
+    [[deprecated]] void report_state() const
+    {
+        spdlog::debug("player {} is at {} {}, velocity: {}, direction_: {}",
+                      name_, position_.x, position_.z, velocity_, direction_);
     }
 
     auto &motion_sequence_uniform()
@@ -131,11 +136,29 @@ class Player {
         return motion_sequence_turn_;
     }
 
+    [[nodiscard]] glm::vec3 position() const
+    {
+        return position_;
+    }
+
+    [[nodiscard]] glm::vec3 direction() const
+    {
+        return {glm::cos(direction_), 0, -glm::sin(direction_)};
+    }
+
+    [[nodiscard]] float fdirection() const
+    {
+        return direction_;
+    }
+
   private:
     std::string name_;
-    glm::vec2 position_;
+    glm::vec3 position_;
     float direction_{};
     float velocity_{};
+    bool should_fire_{};
+    float last_fire_elapsed_{};
+    float rotation_speed_{}; // in radians
     Map *map_;
     Motion_sequence<motions::Uniform> motion_sequence_uniform_;
     Motion_sequence<motions::Turn> motion_sequence_turn_;
