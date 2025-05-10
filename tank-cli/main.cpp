@@ -171,6 +171,7 @@ int main(int argc, char **argv)
             auto now = Clock::now();
             auto delta = now - last_update;
             float dt = std::chrono::duration<float>(delta).count();
+            spdlog::debug("fps: {}", 1.F / dt);
 
             // Process input
             auto events = window.take_events();

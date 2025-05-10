@@ -20,6 +20,11 @@ void Map::add_player(Player &&player)
     players_.push_back(std::move(player));
 }
 
+//    --------------
+//  -/              \-
+// |   x==========x   |
+//  -\              /-
+//    --------------
 void Map::add_barrier(Barrier barrier)
 {
     auto dir = barrier.end - barrier.start;
@@ -30,6 +35,11 @@ void Map::add_barrier(Barrier barrier)
     std::swap(ortho.x, ortho.y);
 
     // Circle in endpoints
+    //    -            -
+    //  -/|            |\-
+    // |--|            |--|
+    //  -\|            |/-
+    //    -            -
     std::vector endpoints{barrier.start, barrier.end};
     for (auto endpoint : endpoints) {
         for (int i{-tank_radius_}; i != tank_radius_ + 1; ++i) {
@@ -46,6 +56,11 @@ void Map::add_barrier(Barrier barrier)
     }
 
     // Rectangle around
+    //     ------------
+    //     ------------
+    //
+    //     ------------
+    //     ------------
     for (int i{}; i != len + 1; ++i) {
         auto point = barrier.start + dir * i;
         for (int j{-tank_radius_}; j != tank_radius_ + 1; ++j) {
@@ -58,6 +73,11 @@ void Map::add_barrier(Barrier barrier)
     }
 
     // Finally, the wall itself
+    //
+    //
+    //     x==========x
+    //
+    //
     for (int i{}; i != len + 1; ++i) {
         auto p_ = barrier.start + dir * i;
         glm::ivec3 p(p_.x, 0, p_.y);

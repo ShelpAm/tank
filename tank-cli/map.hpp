@@ -31,8 +31,11 @@ class Map {
     void render(Shader_program &, Shader_program &,
                 std::function<void(Barrier const &)> const &render_barrier);
 
+    /// @brief Add barrier to the map
     void add_barrier(Barrier barrier);
+
     void add_bullet(Bullet bullet);
+
     void add_player(Player &&player);
 
     void display_terrain() const;

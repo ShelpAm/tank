@@ -183,7 +183,7 @@ void systems::Weapon::update(World &world, float dt)
                         Transform{.position = t.position + // * radius
                                               util::yaw2vec(t.yaw) * 1.F,
                                   .yaw = t.yaw,
-                                  .scale = glm::vec3{1}},
+                                  .scale = glm::vec3{0.2}},
                         Velocity{.linear = w.bullet_speed, .angular = 0},
                         Renderable{.mesh = &systems::Resources::bullet()});
         }
