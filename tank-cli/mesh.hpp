@@ -90,36 +90,18 @@ class Mesh {
 
     void render(Shader_program const &shader) const
     {
+        spdlog::trace("systems::Render vao: {}, vbo: {}, ebo: {}", vao_, vbo_,
+                      ebo_);
         shader.use_program();
         glBindVertexArray(vao_);
         glDrawElements(GL_TRIANGLES, static_cast<GLint>(indices_.size()),
                        GL_UNSIGNED_INT, nullptr);
         glBindVertexArray(0);
 
-        {
-            shader.use_program();
-
-            glBindVertexArray(vao_);
-
-            // Debug
-            spdlog::debug("Rendering mesh: vao={}, indices={}", vao_,
-                          indices_.size());
-            GLint current_vao{-1};
-            glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &current_vao);
-            spdlog::debug("Currently bound VAO: {}", current_vao);
-
-            glDrawElements(GL_TRIANGLES, static_cast<GLint>(indices_.size()),
-                           GL_UNSIGNED_INT, nullptr);
-
-            assert(indices_.size() != 0);
-
-            GLenum err;
-            while ((err = glGetError()) != GL_NO_ERROR) {
-                throw std::runtime_error(
-                    std::format("OpenGL error in Mesh::render(): {}", err));
-            }
-
-            glBindVertexArray(0);
+        GLenum err;
+        while ((err = glGetError()) != GL_NO_ERROR) {
+            throw std::runtime_error(
+                std::format("OpenGL error in Mesh::render(): {}", err));
         }
     }
 

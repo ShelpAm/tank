@@ -1,4 +1,3 @@
-#include "tank-cli/motion.hpp"
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -10,10 +9,11 @@
 #include <spdlog/spdlog.h>
 #include <tank-cli/camera.hpp>
 #include <tank-cli/config.hpp>
-#include <tank-cli/entity.hpp>
+#include <tank-cli/ecs/world.hpp>
 #include <tank-cli/glfw.hpp>
 #include <tank-cli/map.hpp>
 #include <tank-cli/mesh.hpp>
+#include <tank-cli/motion.hpp>
 #include <tank-cli/player.hpp>
 #include <tank-cli/shader-program.hpp>
 #include <tank-cli/time.hpp>
@@ -67,12 +67,12 @@ int main(int argc, char **argv)
 #else
         Window &window = systems::Resources::main_window();
         Shader_program &player_shader = systems::Resources::player_shader();
-        Shader_program &shader = systems::Resources::shader();
+        Shader_program &env_shader = systems::Resources::env_shader();
 #endif
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         glEnable(GL_DEPTH_TEST);
-        glClearColor(0.1, 0.1, 0.1, 1);
+        glClearColor(0.2, 0.2, 0.2, 1);
 
         Mesh tank(tank_vertices, tank_indices);
         Mesh bullet(bullet_vertices, bullet_indices);
@@ -101,54 +101,11 @@ int main(int argc, char **argv)
             glm::radians(45.0F),
             static_cast<float>(window.width()) / window.height(), 0.1F, 200.0F);
 
-        auto render_player = [&](Shader_program &shader, Player const &p) {
-            spdlog::trace("render_player");
-            auto pos = p.position();
-
-            glm::mat4 model(1);
-            model = glm::translate(model, pos);
-            model = glm::rotate(model, p.fdirection(), {0, 1, 0});
-            model = glm::scale(model, glm::vec3(0.15));
-
-            glm::mat4 mvp = proj * view * model;
-            shader.use_program();
-            shader.uniform_mat4("uMVP", mvp);
-
-            tank.render(shader);
-        };
-
-        auto render_bullet = [&](Shader_program &shader, Bullet b) {
-            auto pos = b.position;
-            spdlog::trace("render_bullet: dir: {} {} {}", b.direction.x,
-                          b.direction.y, b.direction.z);
-
-            glm::mat4 model(1);
-            model = glm::translate(model, pos);
-            auto angleXY = [](glm::vec2 v) {
-                // 1) get signed angle in (–π, π]
-                float θ = std::atan2(v.y, v.x);
-                // 2) remap to [0, 2π)
-                if (θ < 0)
-                    θ += 2.0f * M_PI;
-                return θ;
-            };
-            model = glm::rotate(model, angleXY({b.direction.x, b.direction.z}),
-                                {0, 1, 0});
-            model = glm::scale(model, glm::vec3(0.15));
-
-            glm::mat4 mvp = proj * view * model;
-            shader.use_program();
-            shader.uniform_mat4("uMVP", mvp);
-
-            bullet.render(shader);
-        };
-
         auto render_barrier = [&](Barrier const &b) {
             glm::mat4 model(1);
 
             glm::mat4 mvp = proj * view * model;
-            shader.use_program();
-            shader.uniform_mat4("uMVP", mvp);
+            env_shader.uniform_mat4("uMVP", mvp);
 
             // 挤出一半厚度和一半高度
             constexpr float halfWidth = 0.5F;
@@ -182,12 +139,7 @@ int main(int argc, char **argv)
                 2, 3, 6, 6, 3, 7, 3, 1, 7, 7, 1, 5, 1, 0, 5, 5, 0, 4};
 
             Mesh barrier(barrier_verts, barrier_idx);
-            barrier.render(shader);
-            // 6. 调用高级绘制函数
-            // advanced_draw(shader,
-            //               std::vector<glm::vec3>(barrier_verts.begin(),
-            //                                      barrier_verts.end()),
-            //               barrier_idx);
+            barrier.render(env_shader);
         };
 
         map.add_barrier({.start = {0, 0}, .end = {width, 0}});
@@ -209,7 +161,7 @@ int main(int argc, char **argv)
         auto last_update = Clock::now();
         auto last_render = Clock::now();
 
-        ECS ecs;
+        World world;
 
         std::size_t tick{};
         while (!window.should_close()) {
@@ -257,8 +209,8 @@ int main(int argc, char **argv)
 
             float t = Durationf(now - start_time).count();
             spdlog::debug("current time since game started: {}", t);
-            shader.uniform_1f("time", t);
-            player_shader.uniform_1f("time", t);
+            // env_shader.uniform_1f("time", t);
+            // player_shader.uniform_1f("time", t);
             glm::vec3 const center{map.fwidth() / 2, 50, map.fheight() / 2};
             auto look_at = [&](glm::vec3 eye, glm::vec3 target) {
                 auto to_target = target - eye;
@@ -285,21 +237,20 @@ int main(int argc, char **argv)
                                   -map.fheight() * 3 / 4 * std::sin(t * 0.1)},
                     {map.fwidth() / 2, 0, map.fheight() / 2});
             }
+
+            // if (now - last_render >= 30ms) {
+            last_render = now;
+
             window.set_render_fn([&]() {
 #ifndef USE_ECS
-                map.render(shader, player_shader, render_player, render_bullet,
-                           render_barrier);
+                map.render(shader, player_shader, render_barrier);
 #else
-                ecs.update(dt); // TODO(shelpam): Integrating
+                world.update(dt, t); // TODO(shelpam): Integrating
 #endif
             });
 
-            // if (now - last_draw >= 30ms)
-            {
-                last_render = now;
-
-                window.render();
-            }
+            window.render();
+            // }
         }
     }
     Window::deinitialize();

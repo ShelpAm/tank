@@ -1,4 +1,5 @@
 #version 460 core
+in  vec3 fragPos;                     // now holds model-space coords
 out vec4 FragColor;
 uniform float time;
 

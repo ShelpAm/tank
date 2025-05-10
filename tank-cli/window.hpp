@@ -68,12 +68,27 @@ class Window {
         render_fn_ = std::move(render_fn);
     }
 
+    // After calling this function, key_pressed_[key] will be cleared (to be 0).
+    [[nodiscard]] bool key_pressed(int key)
+    {
+        auto ret = key_pressed_[key] != 0U;
+        key_pressed_[key] = 0;
+        return ret;
+    }
+
+    [[nodiscard]] bool key_down(int key)
+    {
+        return key_down_[key] != 0U;
+    }
+
   private:
     GLFWwindow *window_;
     int width_;
     int height_;
     std::vector<Event> events_;
     std::function<Render_fn> render_fn_;
+    std::vector<std::uint8_t> key_pressed_; // Once pressed?
+    std::vector<std::uint8_t> key_down_;
 
     static void error_callback(int error, char const *description);
     static void key_callback(GLFWwindow *window, int key, int scancode,

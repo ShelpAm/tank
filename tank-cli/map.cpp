@@ -1,7 +1,6 @@
 #include <print>
 #include <random>
 #include <ranges>
-#include <tank-cli/entity.hpp>
 #include <tank-cli/map.hpp>
 #include <tank-cli/motion.hpp>
 #include <tank-cli/player.hpp>
@@ -269,23 +268,9 @@ bool Map::is_valid(glm::vec3 pos) const
 //         }
 //     }
 // }
-void Map::render(
-    Shader_program &shader, Shader_program &player_shader,
-    std::function<void(Shader_program &, Player const &)> const &render_fn,
-    std::function<void(Shader_program &, Bullet)> const &render_bullet,
-    std::function<void(Barrier const &)> const &render_barrier)
+void Map::render(Shader_program &shader, Shader_program &player_shader,
+                 std::function<void(Barrier const &)> const &render_barrier)
 {
-    if (!players_.empty()) {
-        render_fn(player_shader, players_.front());
-    }
-    for (auto const &p : players_ | std::views::drop(1)) {
-        render_fn(player_shader, p);
-    }
-
-    for (auto const &b : bullets_) {
-        render_bullet(shader, b);
-    }
-
     for (auto const &b : barriers_) {
         render_barrier(b);
     }

@@ -25,14 +25,11 @@ class Map {
     friend int main(int argc, char **argv);
 
   public:
-    Map(int height, int width);
+    Map(int width, int height);
 
     void update(float dt);
-    void render(
-        Shader_program &, Shader_program &,
-        std::function<void(Shader_program &, Player const &)> const &render_fn,
-        std::function<void(Shader_program &, Bullet)> const &render_bullet,
-        std::function<void(Barrier const &)> const &render_barrier);
+    void render(Shader_program &, Shader_program &,
+                std::function<void(Barrier const &)> const &render_barrier);
 
     void add_barrier(Barrier barrier);
     void add_bullet(Bullet bullet);
