@@ -28,15 +28,17 @@ void systems::Spawner::update(Entity_manager &em, Component_manager &cm)
         static_cast<int>(std::ranges::distance(cm.view<Player_tag>()));
 
     for (int i = 0; i < desired_enemy_count - current; ++i) {
-        spawn_enemy(em, cm);
+        spawn_players(em, cm);
     }
 }
 
-void systems::Spawner::spawn_enemy(Entity_manager &em, Component_manager &cm)
+void systems::Spawner::spawn_players(Entity_manager &em, Component_manager &cm)
 {
     Entity id = em.make();
 
-    cm.add(id, Transform{.position = {rand() % 10, 0.0f, rand() % 10}});
+    cm.add(id, Transform{.position = {rand() % 10, 0.0f, rand() % 10},
+                         .yaw = 0,
+                         .scale = glm::vec3{0.15F}});
     cm.add(id, Velocity{.linear = 0, .angular = 0});
     cm.add(id, Player_tag{});
     cm.add(id, Intent_to_fire{.active = true});
@@ -57,16 +59,17 @@ void systems::AI::update(Entity_manager &em, Component_manager &cm)
 
     for (auto id : cm.view<Player_tag, Transform, Velocity, Intent_to_fire>()) {
         auto &fire = cm.get<Intent_to_fire>(id);
-        auto &trans = cm.get<Transform>(id);
-        auto &movement = cm.get<Velocity>(id);
+        auto &t = cm.get<Transform>(id);
+        auto &v = cm.get<Velocity>(id);
 
         if (fire.active) {
             auto bullet = em.make();
             cm.add(bullet,
-                   Transform{.position = trans.position + // * radius
-                                         util::yaw2vec(trans.yaw) * 1.F,
-                             .yaw = trans.yaw});
-            cm.add(bullet, Velocity{.linear = 30, .angular = 0});
+                   Transform{.position = t.position + // * radius
+                                         util::yaw2vec(t.yaw) * 1.F,
+                             .yaw = t.yaw,
+                             .scale = glm::vec3{1}});
+            cm.add(bullet, Velocity{.linear = v.linear * 2.F, .angular = 0});
             cm.add(bullet, Renderable{.mesh = &systems::Resources::bullet()});
         }
     }
@@ -86,35 +89,21 @@ void systems::Render::render(Component_manager &cm, Camera const &cam,
                                      static_cast<float>(window.height()),
                                  0.1F, 200.0F);
     for (auto id : cm.view<Transform, Renderable>()) {
-        // Non-barrier
-        if (cm.contains<Barrier>(id)) {
-            continue;
-        }
         spdlog::trace("systems::Render entity renderable: {}", id);
         auto &t = cm.get<Transform>(id);
         auto &r = cm.get<Renderable>(id);
         glm::mat4 model(1);
         model = glm::translate(model, t.position);
         model = glm::rotate(model, t.yaw, {0, 1, 0});
-        model = glm::scale(model, glm::vec3{0.15F});
-        player_shader.uniform_mat4("uMVP", proj * view * model);
-        r.mesh->render(player_shader);
-    }
-
-    for (auto id : cm.view<Barrier, Transform, Renderable>()) {
-        spdlog::debug("systems::Render rendering barrier: {}", id);
-        auto &b = cm.get<Barrier>(id);
-        auto &t = cm.get<Transform>(id);
-        auto &r = cm.get<Renderable>(id);
-
-        // 1. 计算中心线的两个端点
-        glm::vec3 s(b.start.x, 0, b.start.y);
-        glm::vec3 e(b.end.x, 0, b.end.y);
-
-        glm::mat4 model(1);
-        model = glm::translate(model, t.position);
-        player_shader.uniform_mat4("uMVP", proj * view * model);
-        r.mesh->render(env_shader);
+        model = glm::scale(model, t.scale);
+        if (cm.contains<Player_tag>(id)) {
+            player_shader.uniform_mat4("uMVP", proj * view * model);
+            r.mesh->render(player_shader);
+        }
+        else if (cm.contains<Barrier_rag>(id)) {
+            env_shader.uniform_mat4("uMVP", proj * view * model);
+            r.mesh->render(env_shader);
+        }
     }
 }
 

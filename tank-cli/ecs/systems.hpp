@@ -29,7 +29,7 @@ class Spawner {
     static void update(Entity_manager &em, Component_manager &cm);
 
   private:
-    static void spawn_enemy(Entity_manager &em, Component_manager &cm);
+    static void spawn_players(Entity_manager &em, Component_manager &cm);
 };
 
 class AI {

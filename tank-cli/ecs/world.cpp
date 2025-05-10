@@ -16,12 +16,55 @@ void World::init()
         auto height = systems::Resources::map().fheight();
 
         // helper lambda to spawn one barrier entity
-        auto spawn_barrier = [&](glm::vec2 s, glm::vec2 e) {
+        auto spawn_barrier = [&](glm::vec2 s2, glm::vec2 e2) {
+            // 1) Create entity and base components
             auto id = em_.make();
-            cm_.add(id, Barrier{.start = s, .end = e});
-            cm_.add(id, Transform{.position = {s.x, 0.F, s.y}, .yaw = 0.F});
+            cm_.add(id, Barrier_rag{});
             cm_.add(id,
-                    Renderable{.mesh = &systems::Resources::barrier_unit()});
+                    Transform{.position = {}, .yaw = 0, .scale = glm::vec3{1}});
+
+            // 2) Compute the eight corner verts of the box
+            glm::vec3 s{s2.x, 0.F, s2.y};
+            glm::vec3 e{e2.x, 0.F, e2.y};
+
+            auto dir = glm::normalize(e - s);
+            auto right = glm::normalize(glm::cross(dir, {0, 1, 0}));
+
+            constexpr float half_width = 0.5F;
+            constexpr float half_height = 3.2F;
+
+            // bottom face verts (y = -halfHeight)
+            std::vector<glm::vec3> verts = {
+                s + right * half_width + glm::vec3{0, -half_height, 0},
+                s - right * half_width + glm::vec3{0, -half_height, 0},
+                e + right * half_width + glm::vec3{0, -half_height, 0},
+                e - right * half_width + glm::vec3{0, -half_height, 0},
+                // top face verts (y = +halfHeight)
+                s + right * half_width + glm::vec3{0, half_height, 0},
+                s - right * half_width + glm::vec3{0, half_height, 0},
+                e + right * half_width + glm::vec3{0, half_height, 0},
+                e - right * half_width + glm::vec3{0, half_height, 0},
+            };
+
+            // 3) Define the 12 triangles (36 indices) for the box
+            std::vector<uint32_t> idx = {// bottom
+                                         0, 1, 2, 2, 1, 3,
+                                         // top
+                                         4, 6, 5, 6, 7, 5,
+                                         // front (s-side)
+                                         0, 2, 4, 4, 2, 6,
+                                         // back (e-side)
+                                         1, 5, 3, 3, 5, 7,
+                                         // left
+                                         1, 0, 5, 5, 0, 4,
+                                         // right
+                                         2, 3, 6, 6, 3, 7};
+
+            // 4) Create a new Mesh with these verts+indices
+            auto *mesh = new Mesh(verts, idx);
+
+            // 5) Attach it
+            cm_.add(id, Renderable{.mesh = mesh});
         };
 
         // outer rectangle
