@@ -69,6 +69,11 @@ class Weapon {
     static void update(World &world, float dt);
 };
 
+class Expiration {
+  public:
+    static void update(World &w, float dt);
+};
+
 class Resources {
   public:
     static Window &main_window()

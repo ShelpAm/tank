@@ -37,17 +37,56 @@ void systems::Physics::update(Entity_manager &em, Component_manager &cm,
             std::clamp(t.position.z, 0.F + 0.5F, map.fheight() - 0.5F);
     }
 
-    // Remove outdated bullet
-    std::vector<int> to_remove;
+    // Collision detection
+    // for (auto it = bullets_.begin(); it != bullets_.end();) {
+    //     // Collide with wall
+    //     bool is_x_axis;
+    //     if (!is_visitable(it->position + it->direction * it->velocity * dt,
+    //                       true, &is_x_axis)) {
+    //         if (is_x_axis) {
+    //             it->direction.z *= -1;
+    //         }
+    //         else {
+    //             it->direction.x *= -1;
+    //         }
+    //         ++it;
+    //         // it = bullets_.erase(it);
+    //         continue;
+    //     }
+    //     it->position += it->direction * it->velocity * dt;
+    //
+    //     it->remaining -= dt * it->velocity;
+    //     if (it->remaining <= 0) {
+    //         it = bullets_.erase(it);
+    //         continue;
+    //     }
+    //
+    //     if (auto jt = std::ranges::find_if( // Collide with tank
+    //             players_,
+    //             [it, this](auto const &player) {
+    //                 return glm::length(player.position_ - it->position) <=
+    //                        tank_radius_;
+    //             });
+    //         jt != players_.end()) {
+    //         players_.erase(jt);
+    //         it = bullets_.erase(it);
+    //         continue;
+    //     }
+    //     // Didn't collide
+    //     ++it;
+    // }
     for (auto id : cm.view<Bullet_tag>()) {
         auto &t = cm.get<Transform>(id);
-        if (t.position.x < 0 || t.position.x > map.fwidth() ||
-            t.position.z < 0 || t.position.z > map.fheight()) {
-            to_remove.push_back(id);
+        auto &v = cm.get<Velocity>(id);
+        bool is_x_axis;
+        if (!map.is_visitable(t.position, true, &is_x_axis)) {
+            if (is_x_axis) {
+                t.yaw = 2 * std::numbers::pi - t.yaw;
+            }
+            else {
+                t.yaw = 3 * std::numbers::pi - t.yaw;
+            }
         }
-    }
-    for (auto id : to_remove) {
-        cm.remove(id);
     }
 }
 
@@ -185,7 +224,22 @@ void systems::Weapon::update(World &world, float dt)
                                   .yaw = t.yaw,
                                   .scale = glm::vec3{0.2}},
                         Velocity{.linear = w.bullet_speed, .angular = 0},
-                        Renderable{.mesh = &systems::Resources::bullet()});
+                        Renderable{.mesh = &systems::Resources::bullet()},
+                        components::Expirable{.remaining_time = 8});
         }
+    }
+}
+
+void systems::Expiration::update(World &w, float dt)
+{
+    std::vector<Entity> expired;
+    for (auto id : w.cm().view<components::Expirable>()) {
+        w.cm().get<components::Expirable>(id).remaining_time -= dt;
+        if (w.cm().get<components::Expirable>(id).remaining_time <= 0) {
+            expired.push_back(id);
+        }
+    }
+    for (auto id : expired) {
+        w.cm().remove(id);
     }
 }

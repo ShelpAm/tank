@@ -60,6 +60,10 @@ class Map {
         return width_;
     }
 
+    [[nodiscard]] bool is_valid(glm::vec3 pos) const;
+    [[nodiscard]] bool is_visitable(glm::vec3 pos, bool is_bullet = false,
+                                    bool *is_x_axis = nullptr) const;
+
   private:
     int width_;
     int height_;
@@ -71,9 +75,6 @@ class Map {
     std::vector<Player> players_;
     std::list<Bullet> bullets_;
 
-    [[nodiscard]] bool is_valid(glm::vec3 pos) const;
-    [[nodiscard]] bool is_visitable(glm::vec3 pos, bool is_bullet = false,
-                                    bool *is_x_axis = nullptr) const;
     void render_circle(std::vector<std::vector<char>> &map, glm::vec2 pos,
                        int radius, char ch) const;
     void render_line(std::vector<std::vector<char>> &map, glm::vec2 u,

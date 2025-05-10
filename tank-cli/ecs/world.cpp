@@ -85,6 +85,7 @@ void World::update(float dt, float t)
     systems::AI::update(em_, cm_);
     systems::Weapon::update(*this, dt);
     systems::Physics::update(em_, cm_, dt, systems::Resources::map());
+    systems::Expiration::update(*this, dt);
     systems::Render::render(cm_, systems::Resources::camera(),
                             systems::Resources::main_window(),
                             systems::Resources::player_shader(),

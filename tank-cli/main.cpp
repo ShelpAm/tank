@@ -210,8 +210,6 @@ int main(int argc, char **argv)
 
             float t = Durationf(now - start_time).count();
             spdlog::debug("current time since game started: {}", t);
-            // env_shader.uniform_1f("time", t);
-            // player_shader.uniform_1f("time", t);
             glm::vec3 const center{map.fwidth() / 2, 50, map.fheight() / 2};
             if (use_tank_camera) {
                 if (map.players_.empty()) {
