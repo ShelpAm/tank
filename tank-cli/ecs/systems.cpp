@@ -50,7 +50,7 @@ void systems::AI::update(Entity_manager &em, Component_manager &cm)
     std::random_device dev;
     std::mt19937 rng(dev());
 
-    for (auto id : cm.view<Player_tag>()) {
+    for (auto id : cm.view<Player_tag>() | std::views::drop(1)) {
         spdlog::trace("systems::AI entity {} enemy_tag: true", id);
         auto &v = cm.get<Velocity>(id);
         v.linear = rng() % 10;
@@ -76,10 +76,13 @@ void systems::AI::update(Entity_manager &em, Component_manager &cm)
 }
 
 void systems::Render::render(Component_manager &cm, Camera const &cam,
-                             Window const &window,
-                             Shader_program &player_shader,
+                             Window &window, Shader_program &player_shader,
                              Shader_program &env_shader, float t)
 {
+    window.use_window();
+    glEnable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     player_shader.uniform_1f("time", t);
     env_shader.uniform_1f("time", t);
 
@@ -88,6 +91,7 @@ void systems::Render::render(Component_manager &cm, Camera const &cam,
                                  static_cast<float>(window.width()) /
                                      static_cast<float>(window.height()),
                                  0.1F, 200.0F);
+
     for (auto id : cm.view<Transform, Renderable>()) {
         spdlog::trace("systems::Render entity renderable: {}", id);
         auto &t = cm.get<Transform>(id);
@@ -105,6 +109,9 @@ void systems::Render::render(Component_manager &cm, Camera const &cam,
             r.mesh->render(env_shader);
         }
     }
+
+    window.swap_buffers();
+    window.poll_events();
 }
 
 void systems::Input::update(Component_manager &cm, Window &window)
@@ -115,11 +122,14 @@ void systems::Input::update(Component_manager &cm, Window &window)
     auto d = window.key_down(GLFW_KEY_D);
     auto j = window.key_pressed(GLFW_KEY_J);
 
-    if (j) {
-        auto players = cm.view<Player_tag>();
-        for (auto p : players) {
-            auto &i = cm.get<Intent_to_fire>(p);
-            i.active ^= 1;
-        }
+    auto players = cm.view<Player_tag>();
+    if (!players.empty()) {
+        auto id = players.front();
+        cm.get<Velocity>(id).angular = std::numbers::pi / 4 * 8 * (a - d);
+        cm.get<Velocity>(id).linear = std::numbers::pi / 4 * 8 *
+                                      (w == s ? 0
+                                       : w    ? 10
+                                              : -8);
+        cm.get<Intent_to_fire>(id).active ^= 1;
     }
 }

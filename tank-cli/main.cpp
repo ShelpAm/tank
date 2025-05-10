@@ -212,13 +212,6 @@ int main(int argc, char **argv)
             // env_shader.uniform_1f("time", t);
             // player_shader.uniform_1f("time", t);
             glm::vec3 const center{map.fwidth() / 2, 50, map.fheight() / 2};
-            auto look_at = [&](glm::vec3 eye, glm::vec3 target) {
-                auto to_target = target - eye;
-                auto to_center = center - eye;
-                auto right = glm::cross(to_target, to_center);
-                auto up = glm::normalize(glm::cross(right, to_target));
-                return glm::lookAt(eye, target, up);
-            };
             if (use_tank_camera) {
                 if (map.players_.empty()) {
                     continue;
@@ -230,6 +223,13 @@ int main(int argc, char **argv)
                 view = tank_camera.calc_view_matrix();
             }
             else {
+                auto look_at = [&](glm::vec3 eye, glm::vec3 target) {
+                    auto to_target = target - eye;
+                    auto to_center = center - eye;
+                    auto right = glm::cross(to_target, to_center);
+                    auto up = glm::normalize(glm::cross(right, to_target));
+                    return glm::lookAt(eye, target, up);
+                };
                 view = look_at(
                     center +
                         glm::vec3{map.fwidth() * 3 / 4 * std::cos(t * 0.1),
@@ -241,15 +241,11 @@ int main(int argc, char **argv)
             // if (now - last_render >= 30ms) {
             last_render = now;
 
-            window.set_render_fn([&]() {
 #ifndef USE_ECS
-                map.render(shader, player_shader, render_barrier);
+            map.render(shader, player_shader, render_barrier);
 #else
-                world.update(dt, t); // TODO(shelpam): Integrating
+            world.update(dt, t); // TODO(shelpam): Integrating
 #endif
-            });
-
-            window.render();
             // }
         }
     }

@@ -51,8 +51,8 @@ class Map {
 class Render {
   public:
     /// @param t Time since game started
-    static void render(Component_manager &cm, Camera const &cam,
-                       Window const &window, Shader_program &player_shader,
+    static void render(Component_manager &cm, Camera const &cam, Window &window,
+                       Shader_program &player_shader,
                        Shader_program &env_shader, float t);
 };
 

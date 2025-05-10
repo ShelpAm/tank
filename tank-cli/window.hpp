@@ -34,18 +34,13 @@ class Window {
     [[nodiscard]] bool should_close() const;
     void set_should_close(bool value);
 
+    /// @brief GLFWwindow contains GL context, so before any invocation to
+    /// OpenGL function, call this.
     void use_window();
 
     std::vector<Event> take_events()
     {
         return std::exchange(events_, {});
-    }
-
-    void render()
-    {
-        pre_render();
-        on_render();
-        post_render();
     }
 
     [[nodiscard]] int width() const
@@ -63,10 +58,9 @@ class Window {
         return window_;
     }
 
-    void set_render_fn(std::function<Render_fn> render_fn)
-    {
-        render_fn_ = std::move(render_fn);
-    }
+    void poll_events();
+
+    void swap_buffers();
 
     // After calling this function, key_pressed_[key] will be cleared (to be 0).
     [[nodiscard]] bool key_pressed(int key)
@@ -93,23 +87,4 @@ class Window {
     static void error_callback(int error, char const *description);
     static void key_callback(GLFWwindow *window, int key, int scancode,
                              int action, int mods);
-
-    void poll_events();
-
-    void pre_render()
-    {
-        use_window();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    }
-    void on_render()
-    {
-        if (render_fn_) {
-            render_fn_();
-        }
-    }
-    void post_render()
-    {
-        glfwSwapBuffers(window_);
-        poll_events();
-    }
 };

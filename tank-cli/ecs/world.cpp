@@ -1,5 +1,3 @@
-#pragma once
-
 #include <tank-cli/ecs/components.hpp>
 #include <tank-cli/ecs/world.hpp>
 

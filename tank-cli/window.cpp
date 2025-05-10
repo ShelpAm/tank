@@ -92,3 +92,8 @@ void Window::key_callback(GLFWwindow *window, int key, int scancode, int action,
     auto *self = static_cast<Window *>(glfwGetWindowUserPointer(window));
     self->key_callback(key, scancode, action, mods);
 }
+
+void Window::swap_buffers()
+{
+    glfwSwapBuffers(window_);
+}
