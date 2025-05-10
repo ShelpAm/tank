@@ -27,6 +27,11 @@ template <typename T> class Component_storage {
         return entities_.at(id);
     }
 
+    void remove(Entity id)
+    {
+        entities_.erase(id);
+    }
+
     std::unordered_map<Entity, T> const &entities() const
     {
         return entities_;
@@ -52,6 +57,8 @@ class Component_manager {
     {
         return storage<Component>().contains(id);
     }
+
+    void remove(Entity id);
 
     template <typename First, typename... Rest> std::vector<Entity> eager_view()
     {

@@ -21,15 +21,18 @@ glm::vec3 yaw2vec(float yaw);
 
 class Physics {
   public:
-    static void update(Entity_manager &em, Component_manager &cm, float dt);
+    static void update(Entity_manager &em, Component_manager &cm, float dt,
+                       ::Map const &map);
 };
 
 class Spawner {
   public:
-    static void update(Entity_manager &em, Component_manager &cm);
+    static void update(Entity_manager &em, Component_manager &cm, ::Map &map);
 
   private:
-    static void spawn_players(Entity_manager &em, Component_manager &cm);
+    template <typename Tag>
+    static void spawn_tank(Entity_manager &em, Component_manager &cm,
+                           ::Map &map, Tag tag);
 };
 
 class AI {
@@ -59,6 +62,11 @@ class Render {
 class Input {
   public:
     static void update(Component_manager &cm, Window &window);
+};
+
+class Weapon {
+  public:
+    static void update(World &world, float dt);
 };
 
 class Resources {

@@ -81,9 +81,10 @@ void World::init()
 void World::update(float dt, float t)
 {
     systems::Input::update(cm_, systems::Resources::main_window());
-    systems::Spawner::update(em_, cm_);
+    systems::Spawner::update(em_, cm_, systems::Resources::map());
     systems::AI::update(em_, cm_);
-    systems::Physics::update(em_, cm_, dt);
+    systems::Weapon::update(*this, dt);
+    systems::Physics::update(em_, cm_, dt, systems::Resources::map());
     systems::Render::render(cm_, systems::Resources::camera(),
                             systems::Resources::main_window(),
                             systems::Resources::player_shader(),

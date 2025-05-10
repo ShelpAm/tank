@@ -14,17 +14,25 @@ struct Velocity {
     float linear;
     float angular;
 };
-struct Weapon {
-    float fire_rate;
-    float cooldown;
-};
 struct Intent_to_fire {
     bool active;
 };
 
+struct Bullet_tag {};
 struct Player_tag {};
+struct Bot_tag {};
 struct Barrier_rag {};
 
 struct Renderable {
     Mesh *mesh;
 };
+
+namespace components {
+
+struct Weapon {
+    float fire_rate;
+    float bullet_speed;
+    float cooldown;
+};
+
+} // namespace components
