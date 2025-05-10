@@ -123,7 +123,8 @@ void systems::Spawner::update(Entity_manager &em, Component_manager &cm,
         spawn_tank(em, cm, map, Bot_tag{});
     }
 
-    if (cm.view<Player_tag>().empty()) {
+    while (cm.eager_view<Player_tag>().size() < 2) {
+        spawn_tank(em, cm, map, Player_tag{});
         spawn_tank(em, cm, map, Player_tag{});
     }
 }
@@ -163,7 +164,7 @@ void systems::AI::update(Entity_manager &em, Component_manager &cm)
 
     for (auto id : cm.view<Bot_tag, Intent_to_fire>()) {
         auto &fire = cm.get<Intent_to_fire>(id);
-        fire.active = true;
+        fire.active = false;
     }
 }
 
@@ -216,14 +217,26 @@ void systems::Input::update(Component_manager &cm, Window &window)
     auto a = window.key_down(GLFW_KEY_A);
     auto s = window.key_down(GLFW_KEY_S);
     auto d = window.key_down(GLFW_KEY_D);
-    auto j = window.key_pressed(GLFW_KEY_J);
+    auto q = window.key_pressed(GLFW_KEY_Q);
+    auto up = window.key_down(GLFW_KEY_UP);
+    auto down = window.key_down(GLFW_KEY_DOWN);
+    auto left = window.key_down(GLFW_KEY_LEFT);
+    auto right = window.key_down(GLFW_KEY_RIGHT);
+    auto m = window.key_pressed(GLFW_KEY_M);
 
-    auto players = cm.view<Player_tag>();
-    if (!players.empty()) {
-        auto id = players.front();
-        cm.get<Velocity>(id).angular = std::numbers::pi / 4 * 8 * (a - d);
-        cm.get<Velocity>(id).linear = (w == s ? 0 : w ? 15 : -10);
-        cm.get<Intent_to_fire>(id).active ^= j;
+    auto players = cm.eager_view<Player_tag>();
+    if (players.size() >= 1) {
+        auto p1 = *std::ranges::next(players.begin(), 0);
+        cm.get<Velocity>(p1).angular = std::numbers::pi / 4 * 8 * (a - d);
+        cm.get<Velocity>(p1).linear = (w == s ? 0 : w ? 15 : -10);
+        cm.get<Intent_to_fire>(p1).active ^= q;
+    }
+    if (players.size() >= 2) {
+        auto p2 = *std::ranges::next(players.begin(), 1);
+        cm.get<Velocity>(p2).angular =
+            std::numbers::pi / 4 * 8 * (left - right);
+        cm.get<Velocity>(p2).linear = (up == down ? 0 : up ? 15 : -10);
+        cm.get<Intent_to_fire>(p2).active ^= m;
     }
 }
 
@@ -246,6 +259,10 @@ void systems::Weapon::update(World &world, float dt)
                 Velocity{.linear = w.bullet_speed, .angular = 0},
                 Renderable{.mesh = &systems::Resources::bullet()},
                 components::Expirable{.remaining_time = 8});
+
+            if (world.cm().contains<Player_tag>(id)) {
+                world.cm().get<Intent_to_fire>(id).active = false;
+            }
         }
     }
 }
