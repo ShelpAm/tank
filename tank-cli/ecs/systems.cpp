@@ -125,7 +125,7 @@ void systems::Spawner::spawn_tank(Entity_manager &em, Component_manager &cm,
     cm.add(id, Velocity{.linear = 0, .angular = 0});
     cm.add(id, Intent_to_fire{.active = false});
     cm.add(id, components::Weapon{
-                   .fire_rate = 2.5F, .bullet_speed = 20, .cooldown = 0});
+                   .fire_rate = 2.5F, .bullet_speed = 16, .cooldown = 0});
     cm.add(id, Renderable{.mesh = &systems::Resources::tank()});
 }
 
