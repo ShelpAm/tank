@@ -22,19 +22,10 @@ void systems::Physics::update(Entity_manager &em, Component_manager &cm,
     }
 
     // Restrict position in map
-    for (auto id : cm.view<Player_tag>()) {
+    for (auto id : cm.view<Tank_tag>()) {
         auto &t = cm.get<Transform>(id);
-        t.position.x =
-            std::clamp(t.position.x, 0.F + 0.5F, map.fwidth() - 0.5F);
-        t.position.z =
-            std::clamp(t.position.z, 0.F + 0.5F, map.fheight() - 0.5F);
-    }
-    for (auto id : cm.view<Bot_tag>()) {
-        auto &t = cm.get<Transform>(id);
-        t.position.x =
-            std::clamp(t.position.x, 0.F + 0.5F, map.fwidth() - 0.5F);
-        t.position.z =
-            std::clamp(t.position.z, 0.F + 0.5F, map.fheight() - 0.5F);
+        t.position.x = std::clamp(t.position.x, 0.F + 3, map.fwidth() - 3);
+        t.position.z = std::clamp(t.position.z, 0.F + 3, map.fheight() - 3);
     }
 
     // Collision detection
@@ -75,6 +66,7 @@ void systems::Physics::update(Entity_manager &em, Component_manager &cm,
     //     // Didn't collide
     //     ++it;
     // }
+    // Bullet collide with wall
     for (auto id : cm.view<Bullet_tag>()) {
         auto &t = cm.get<Transform>(id);
         auto &v = cm.get<Velocity>(id);
@@ -87,6 +79,25 @@ void systems::Physics::update(Entity_manager &em, Component_manager &cm,
                 t.yaw = 3 * std::numbers::pi - t.yaw;
             }
         }
+    }
+
+    // Collide with tank
+    std::vector<Entity> to_remove;
+    for (auto id : cm.view<Bullet_tag>()) {
+        auto &t = cm.get<Transform>(id);
+
+        auto tanks = cm.view<Tank_tag>();
+        auto it = std::ranges::find_if(tanks, [&cm, t](auto tank) {
+            return glm::length(cm.get<Transform>(tank).position - t.position) <=
+                   1.5F; // Tank radius
+        });
+        if (it != tanks.end()) {
+            to_remove.push_back(*it);
+            to_remove.push_back(id);
+        }
+    }
+    for (auto id : to_remove) {
+        cm.remove(id);
     }
 }
 
@@ -117,6 +128,7 @@ void systems::Spawner::spawn_tank(Entity_manager &em, Component_manager &cm,
 
     std::random_device dev;
     std::mt19937 rng(dev());
+    cm.add(id, Tank_tag{});
     cm.add(id, tag);
     cm.add(id, Transform{.position = {rng() % map.width(), 0.0f,
                                       rng() % map.height()},
@@ -125,7 +137,7 @@ void systems::Spawner::spawn_tank(Entity_manager &em, Component_manager &cm,
     cm.add(id, Velocity{.linear = 0, .angular = 0});
     cm.add(id, Intent_to_fire{.active = false});
     cm.add(id, components::Weapon{
-                   .fire_rate = 2.5F, .bullet_speed = 16, .cooldown = 0});
+                   .fire_rate = 0.5F, .bullet_speed = 16, .cooldown = 0});
     cm.add(id, Renderable{.mesh = &systems::Resources::tank()});
 }
 
@@ -176,7 +188,7 @@ void systems::Render::render(Component_manager &cm, Camera const &cam,
             player_shader.uniform_mat4("uMVP", proj * view * model);
             r.mesh->render(player_shader);
         }
-        else if (cm.contains<Barrier_rag>(id)) {
+        else if (cm.contains<Barrier_tag>(id)) {
             env_shader.uniform_mat4("uMVP", proj * view * model);
             r.mesh->render(env_shader);
         }
@@ -218,14 +230,14 @@ void systems::Weapon::update(World &world, float dt)
         w.cooldown -= dt;
         if (w.cooldown <= 0.F && i.active) {
             w.cooldown = 1.F / w.fire_rate;
-            make_bullet(world,
-                        Transform{.position = t.position + // * radius
-                                              util::yaw2vec(t.yaw) * 1.F,
-                                  .yaw = t.yaw,
-                                  .scale = glm::vec3{0.2}},
-                        Velocity{.linear = w.bullet_speed, .angular = 0},
-                        Renderable{.mesh = &systems::Resources::bullet()},
-                        components::Expirable{.remaining_time = 8});
+            make_bullet(
+                world,
+                Transform{.position = t.position + util::yaw2vec(t.yaw) * 2.F,
+                          .yaw = t.yaw,
+                          .scale = glm::vec3{0.2}},
+                Velocity{.linear = w.bullet_speed, .angular = 0},
+                Renderable{.mesh = &systems::Resources::bullet()},
+                components::Expirable{.remaining_time = 8});
         }
     }
 }

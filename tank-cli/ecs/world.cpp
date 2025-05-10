@@ -17,7 +17,7 @@ void World::init()
         auto spawn_barrier = [&](glm::vec2 s2, glm::vec2 e2) {
             // 1) Create entity and base components
             auto id = em_.make();
-            cm_.add(id, Barrier_rag{});
+            cm_.add(id, Barrier_tag{});
             cm_.add(id,
                     Transform{.position = {}, .yaw = 0, .scale = glm::vec3{1}});
 

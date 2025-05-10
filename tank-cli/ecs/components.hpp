@@ -4,10 +4,11 @@
 
 class Mesh;
 
+struct Barrier_tag {};
 struct Bullet_tag {};
-struct Player_tag {};
 struct Bot_tag {};
-struct Barrier_rag {};
+struct Player_tag {};
+struct Tank_tag {};
 
 // Components
 struct Transform {
