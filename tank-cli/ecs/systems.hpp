@@ -99,7 +99,7 @@ class Resources {
     {
         static Camera camera(
             std::numbers::pi / 2, (-std::numbers::pi / 3.5) + 0.01F,
-            glm::vec3(map().fwidth() / 2, 100, (map().fheight() / 2) + 60));
+            glm::vec3(map().fwidth() / 2, 100, (map().fheight() / 2) + 80));
         return camera;
     }
 

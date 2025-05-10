@@ -17,7 +17,15 @@ void systems::Physics::update(Entity_manager &em, Component_manager &cm,
     for (Entity id : cm.view<Transform, Velocity>()) {
         auto &t = cm.get<Transform>(id);
         auto &v = cm.get<Velocity>(id);
-        t.position += util::yaw2vec(t.yaw) * v.linear * dt;
+        if (cm.contains<Player_tag>(id)) {
+            auto dest = t.position + util::yaw2vec(t.yaw) * v.linear * dt;
+            if (map.is_visitable(dest, false)) {
+                t.position = dest;
+            }
+        }
+        else {
+            t.position += util::yaw2vec(t.yaw) * v.linear * dt;
+        }
         t.yaw += v.angular * dt;
     }
 
