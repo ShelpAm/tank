@@ -11,13 +11,23 @@ glm::vec3 systems::util::yaw2vec(float yaw)
     return glm::vec3{std::cos(yaw), 0, -std::sin(yaw)};
 }
 
+auto systems::util::rand()
+{
+    static std::random_device dev;
+    static std::mt19937 rng(dev());
+    auto ret = rng();
+    spdlog::trace("systems::util::rand returns: {}", ret);
+    return ret;
+}
+
 void systems::Physics::update(Entity_manager &em, Component_manager &cm,
                               float dt, ::Map const &map)
 {
     for (Entity id : cm.view<Transform, Velocity>()) {
         auto &t = cm.get<Transform>(id);
         auto &v = cm.get<Velocity>(id);
-        if (cm.contains<Player_tag>(id)) {
+        // For tanks
+        if (cm.contains<Tank_tag>(id)) {
             auto dest = t.position + util::yaw2vec(t.yaw) * v.linear * dt;
             if (map.is_visitable(dest, false)) {
                 t.position = dest;
@@ -29,51 +39,7 @@ void systems::Physics::update(Entity_manager &em, Component_manager &cm,
         t.yaw += v.angular * dt;
     }
 
-    // Restrict position in map
-    for (auto id : cm.view<Tank_tag>()) {
-        auto &t = cm.get<Transform>(id);
-        t.position.x = std::clamp(t.position.x, 0.F + 3, map.fwidth() - 3);
-        t.position.z = std::clamp(t.position.z, 0.F + 3, map.fheight() - 3);
-    }
-
     // Collision detection
-    // for (auto it = bullets_.begin(); it != bullets_.end();) {
-    //     // Collide with wall
-    //     bool is_x_axis;
-    //     if (!is_visitable(it->position + it->direction * it->velocity * dt,
-    //                       true, &is_x_axis)) {
-    //         if (is_x_axis) {
-    //             it->direction.z *= -1;
-    //         }
-    //         else {
-    //             it->direction.x *= -1;
-    //         }
-    //         ++it;
-    //         // it = bullets_.erase(it);
-    //         continue;
-    //     }
-    //     it->position += it->direction * it->velocity * dt;
-    //
-    //     it->remaining -= dt * it->velocity;
-    //     if (it->remaining <= 0) {
-    //         it = bullets_.erase(it);
-    //         continue;
-    //     }
-    //
-    //     if (auto jt = std::ranges::find_if( // Collide with tank
-    //             players_,
-    //             [it, this](auto const &player) {
-    //                 return glm::length(player.position_ - it->position) <=
-    //                        tank_radius_;
-    //             });
-    //         jt != players_.end()) {
-    //         players_.erase(jt);
-    //         it = bullets_.erase(it);
-    //         continue;
-    //     }
-    //     // Didn't collide
-    //     ++it;
-    // }
     // Bullet collide with wall
     for (auto id : cm.view<Bullet_tag>()) {
         auto &t = cm.get<Transform>(id);
@@ -89,7 +55,7 @@ void systems::Physics::update(Entity_manager &em, Component_manager &cm,
         }
     }
 
-    // Collide with tank
+    // Collision between bullet and tank
     std::vector<Entity> to_remove;
     for (auto id : cm.view<Bullet_tag>()) {
         auto &t = cm.get<Transform>(id);
@@ -109,110 +75,90 @@ void systems::Physics::update(Entity_manager &em, Component_manager &cm,
     }
 }
 
-void systems::Spawner::update(Entity_manager &em, Component_manager &cm,
-                              ::Map &map)
+void systems::Spawner::update(World &w, ::Map &map)
 {
     int const desired_bot_count = 5;
     int current_bot_count =
-        static_cast<int>(std::ranges::distance(cm.view<Bot_tag>()));
+        static_cast<int>(std::ranges::distance(w.cm().view<Bot_tag>()));
+
     spdlog::trace(
         "systems::Spawner desired_bot_count: {}, current_bot_count: {}",
         desired_bot_count, current_bot_count);
 
     for (int i = 0; i < desired_bot_count - current_bot_count; ++i) {
-        spawn_tank(em, cm, map, Bot_tag{});
+        spawn_tank(w, map, Bot_tag{});
     }
 
-    while (cm.eager_view<Player_tag>().size() < 2) {
-        spawn_tank(em, cm, map, Player_tag{});
-        spawn_tank(em, cm, map, Player_tag{});
+    while (w.cm().eager_view<Player_tag>().size() < 2) {
+        spawn_tank(w, map, Player_tag{});
+        spawn_tank(w, map, Player_tag{});
     }
 }
 
 template <typename Tag>
-void systems::Spawner::spawn_tank(Entity_manager &em, Component_manager &cm,
-                                  ::Map &map, Tag tag)
+Entity systems::Spawner::spawn_tank(World &w, ::Map &map, Tag player_or_bot_tag,
+                                    Transform t, Velocity v,
+                                    components::Weapon weapon)
 {
-    Entity id = em.make();
+    Entity id = w.em().make();
+    w.cm().add(id, Tank_tag{});
+    w.cm().add(id, player_or_bot_tag);
+    w.cm().add(id, t);
+    w.cm().add(id, v);
+    w.cm().add(id, weapon);
+    w.cm().add(id, Renderable{.mesh = &systems::Resources::tank()});
+    return id;
+}
 
-    std::random_device dev;
-    std::mt19937 rng(dev());
-    cm.add(id, Tank_tag{});
-    cm.add(id, tag);
-    cm.add(id, Transform{.position = {rng() % map.width(), 0.0f,
-                                      rng() % map.height()},
-                         .yaw = 0,
-                         .scale = glm::vec3{0.15F}});
-    cm.add(id, Velocity{.linear = 0, .angular = 0});
-    cm.add(id, Intent_to_fire{.active = false});
-    cm.add(id, components::Weapon{
-                   .fire_rate = 0.5F, .bullet_speed = 16, .cooldown = 0});
-    cm.add(id, Renderable{.mesh = &systems::Resources::tank()});
+template <typename Tag>
+Entity systems::Spawner::spawn_tank(World &w, ::Map &map, Tag player_or_bot_tag)
+{
+    // Generate a visitable position to place the tank.
+    glm::vec3 position;
+    do {
+        position = {util::rand() % map.width(), 0.0F,
+                    util::rand() % map.height()};
+    } while (!map.is_visitable(position));
+
+    return spawn_tank(
+        w, map, player_or_bot_tag,
+        Transform{.position = position, .yaw = 0, .scale = glm::vec3{0.15F}},
+        Velocity{.linear = 0, .angular = 0},
+        components::Weapon{.fire_rate = 0.5F,
+                           .bullet_speed = 16,
+                           .cooldown = 0,
+                           .active = false});
+}
+
+Entity systems::Spawner::spawn_bullet(World &w, Transform t, Velocity v,
+                                      Renderable r, components::Expirable e)
+{
+    auto bullet = w.em().make();
+    w.cm().add(bullet, Bullet_tag{});
+    w.cm().add(bullet, t);
+    w.cm().add(bullet, v);
+    w.cm().add(bullet, r);
+    w.cm().add(bullet, e);
+    return bullet;
 }
 
 void systems::AI::update(Entity_manager &em, Component_manager &cm)
 {
-    std::random_device dev;
-    std::mt19937 rng(dev());
 
-    for (auto id : cm.view<Bot_tag>()) {
+    // Randomize bot's velocity and remove their intent to fire
+    for (auto id : cm.view<Bot_tag, components::Weapon>()) {
         spdlog::trace("systems::AI entity {} enemy_tag: true", id);
         auto &v = cm.get<Velocity>(id);
-        v.linear = rng() % 10;
-        v.angular = rng() % 10;
-    }
-
-    for (auto id : cm.view<Bot_tag, Intent_to_fire>()) {
-        auto &fire = cm.get<Intent_to_fire>(id);
+        auto &fire = cm.get<components::Weapon>(id);
+        v.linear = util::rand() % 15;
+        v.angular = util::rand() % 5;
         fire.active = false;
     }
 }
 
-void systems::Render::render(Component_manager &cm, Camera const &cam,
-                             Window &window, Shader_program &player_shader,
-                             Shader_program &env_shader, float t)
-{
-    window.use_window();
-    glEnable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    player_shader.uniform_1f("time", t);
-    env_shader.uniform_1f("time", t);
-
-    auto view = cam.calc_view_matrix();
-    auto proj = glm::perspective(std::numbers::pi_v<float> / 4,
-                                 static_cast<float>(window.width()) /
-                                     static_cast<float>(window.height()),
-                                 0.1F, 200.0F);
-
-    for (auto id : cm.view<Transform, Renderable>()) {
-        spdlog::trace("systems::Render entity renderable: {}", id);
-        auto &t = cm.get<Transform>(id);
-        auto &r = cm.get<Renderable>(id);
-        glm::mat4 model(1);
-        model = glm::translate(model, t.position);
-        model = glm::rotate(model, t.yaw, {0, 1, 0});
-        model = glm::scale(model, t.scale);
-        if (cm.contains<Bot_tag>(id) || cm.contains<Player_tag>(id)) {
-            player_shader.uniform_mat4("uMVP", proj * view * model);
-            r.mesh->render(player_shader);
-        }
-        else if (cm.contains<Barrier_tag>(id)) {
-            env_shader.uniform_mat4("uMVP", proj * view * model);
-            r.mesh->render(env_shader);
-        }
-        else {
-            env_shader.uniform_mat4("uMVP", proj * view * model);
-            r.mesh->render(env_shader);
-        }
-    }
-
-    window.swap_buffers();
-    window.poll_events();
-}
-
 void systems::Input::update(Component_manager &cm, Window &window)
 {
+    auto esc = window.key_pressed(GLFW_KEY_ESCAPE);
     auto w = window.key_down(GLFW_KEY_W);
     auto a = window.key_down(GLFW_KEY_A);
     auto s = window.key_down(GLFW_KEY_S);
@@ -224,34 +170,36 @@ void systems::Input::update(Component_manager &cm, Window &window)
     auto right = window.key_down(GLFW_KEY_RIGHT);
     auto m = window.key_pressed(GLFW_KEY_M);
 
+    if (esc) {
+        std::exit(0);
+    }
+
     auto players = cm.eager_view<Player_tag>();
     if (players.size() >= 1) {
         auto p1 = *std::ranges::next(players.begin(), 0);
         cm.get<Velocity>(p1).angular = std::numbers::pi / 4 * 8 * (a - d);
         cm.get<Velocity>(p1).linear = (w == s ? 0 : w ? 15 : -10);
-        cm.get<Intent_to_fire>(p1).active ^= q;
+        cm.get<components::Weapon>(p1).active ^= q;
     }
     if (players.size() >= 2) {
         auto p2 = *std::ranges::next(players.begin(), 1);
         cm.get<Velocity>(p2).angular =
             std::numbers::pi / 4 * 8 * (left - right);
         cm.get<Velocity>(p2).linear = (up == down ? 0 : up ? 15 : -10);
-        cm.get<Intent_to_fire>(p2).active ^= m;
+        cm.get<components::Weapon>(p2).active ^= m;
     }
 }
 
-void systems::Weapon::update(World &world, float dt)
+void systems::Weapon_system::update(World &world, float dt)
 {
-    for (auto id :
-         world.cm().view<Transform, components::Weapon, Intent_to_fire>()) {
+    for (auto id : world.cm().view<Tank_tag, Transform, components::Weapon>()) {
         auto &t = world.cm().get<Transform>(id);
         auto &w = world.cm().get<components::Weapon>(id);
-        auto &i = world.cm().get<Intent_to_fire>(id);
 
         w.cooldown -= dt;
-        if (w.cooldown <= 0.F && i.active) {
+        if (w.cooldown <= 0.F && w.active) {
             w.cooldown = 1.F / w.fire_rate;
-            make_bullet(
+            Spawner::spawn_bullet(
                 world,
                 Transform{.position = t.position + util::yaw2vec(t.yaw) * 2.F,
                           .yaw = t.yaw,
@@ -261,7 +209,7 @@ void systems::Weapon::update(World &world, float dt)
                 components::Expirable{.remaining_time = 8});
 
             if (world.cm().contains<Player_tag>(id)) {
-                world.cm().get<Intent_to_fire>(id).active = false;
+                w.active = false;
             }
         }
     }

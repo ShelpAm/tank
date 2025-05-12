@@ -1,4 +1,5 @@
 #include <tank-cli/ecs/components.hpp>
+#include <tank-cli/ecs/systems/render.hpp>
 #include <tank-cli/ecs/world.hpp>
 
 World::World()
@@ -10,9 +11,6 @@ void World::init()
 {
     // Somewhere in World::init() or your InitSystem:
     {
-        auto width = systems::Resources::map().fwidth();
-        auto height = systems::Resources::map().fheight();
-
         // helper lambda to spawn one barrier entity
         auto spawn_barrier = [&](glm::vec2 s2, glm::vec2 e2) {
             // 1) Create entity and base components
@@ -65,6 +63,8 @@ void World::init()
             cm_.add(id, Renderable{.mesh = mesh});
         };
 
+        auto width = systems::Resources::map().fwidth();
+        auto height = systems::Resources::map().fheight();
         // outer rectangle
         spawn_barrier({0, 0}, {width, 0});
         spawn_barrier({width, 0}, {width, height});
@@ -81,9 +81,9 @@ void World::init()
 void World::update(float dt, float t)
 {
     systems::Input::update(cm_, systems::Resources::main_window());
-    systems::Spawner::update(em_, cm_, systems::Resources::map());
+    systems::Spawner::update(*this, systems::Resources::map());
     systems::AI::update(em_, cm_);
-    systems::Weapon::update(*this, dt);
+    systems::Weapon_system::update(*this, dt);
     systems::Physics::update(em_, cm_, dt, systems::Resources::map());
     systems::Expiration::update(*this, dt);
     systems::Render::render(cm_, systems::Resources::camera(),

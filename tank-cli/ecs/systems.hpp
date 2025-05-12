@@ -1,8 +1,10 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <random>
 #include <tank-cli/camera.hpp>
 #include <tank-cli/ecs/component-manager.hpp>
+#include <tank-cli/ecs/components.hpp>
 #include <tank-cli/ecs/entity-manager.hpp>
 #include <tank-cli/map.hpp>
 #include <tank-cli/mesh.hpp>
@@ -16,6 +18,7 @@ namespace systems {
 namespace util {
 
 glm::vec3 yaw2vec(float yaw);
+auto rand();
 
 } // namespace util
 
@@ -27,12 +30,20 @@ class Physics {
 
 class Spawner {
   public:
-    static void update(Entity_manager &em, Component_manager &cm, ::Map &map);
+    static void update(World &w, ::Map &map);
+
+    template <typename Tag>
+    static Entity spawn_tank(World &w, ::Map &map, Tag player_or_bot_tag,
+                             Transform t, Velocity v,
+                             components::Weapon weapon);
+
+    template <typename Tag>
+    static Entity spawn_tank(World &w, ::Map &map, Tag player_or_bot_tag);
+
+    static Entity spawn_bullet(World &w, Transform t, Velocity v, Renderable r,
+                               components::Expirable e);
 
   private:
-    template <typename Tag>
-    static void spawn_tank(Entity_manager &em, Component_manager &cm,
-                           ::Map &map, Tag tag);
 };
 
 class AI {
@@ -51,20 +62,12 @@ class Map {
   private:
 };
 
-class Render {
-  public:
-    /// @param t Time since game started
-    static void render(Component_manager &cm, Camera const &cam, Window &window,
-                       Shader_program &player_shader,
-                       Shader_program &env_shader, float t);
-};
-
 class Input {
   public:
     static void update(Component_manager &cm, Window &window);
 };
 
-class Weapon {
+class Weapon_system {
   public:
     static void update(World &world, float dt);
 };

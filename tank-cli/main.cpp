@@ -101,6 +101,7 @@ int main(int argc, char **argv)
             glm::radians(45.0F),
             static_cast<float>(window.width()) / window.height(), 0.1F, 200.0F);
 
+#ifndef USE_ECS
         auto render_barrier = [&](Barrier const &b) {
             glm::mat4 model(1);
 
@@ -151,15 +152,11 @@ int main(int argc, char **argv)
         map.add_barrier({.start = {width / 3 * 2, height / 3},
                          .end = {width / 3 * 2, height}});
 
-        // Lock
-        // map.add_barrier(
-        //     {.start = glm::vec3{-1, 0, 0}, .end = glm::vec3{-2, 0, 0}});
-
         std::unordered_map<int, bool> key_pressing;
+#endif
 
         auto start_time = Clock::now();
-        auto last_update = Clock::now();
-        auto last_render = Clock::now();
+        auto last_frame = Clock::now();
 
         World world;
 
@@ -169,10 +166,9 @@ int main(int argc, char **argv)
 
             // Seconds is the default time unit
             auto now = Clock::now();
-            auto delta = now - last_update;
-            float dt = std::chrono::duration<float>(delta).count();
-            spdlog::debug("fps: {}", 1.F / dt);
+            float dt = Durationf(now - last_frame).count();
 
+#ifndef USE_ECS
             // Process input
             auto events = window.take_events();
             for (auto const &e : events) {
@@ -194,7 +190,6 @@ int main(int argc, char **argv)
                     e);
             }
             // if (now - last_update >= 30ms) {
-            last_update = now;
             if (!map.players_.empty()) {
                 map.players_.front().set_rotation_speed(
                     std::numbers::pi / 4 * 8 *
@@ -206,10 +201,12 @@ int main(int argc, char **argv)
                 map.players_.front().set_should_fire(key_pressing[GLFW_KEY_J]);
             }
             map.update(dt);
-            // }
+// }
+#endif
 
             float t = Durationf(now - start_time).count();
             spdlog::debug("current time since game started: {}", t);
+#ifndef USE_ECS
             glm::vec3 const center{map.fwidth() / 2, 50, map.fheight() / 2};
             if (use_tank_camera) {
                 if (map.players_.empty()) {
@@ -236,16 +233,15 @@ int main(int argc, char **argv)
                                   -map.fheight() * 3 / 4 * std::sin(t * 0.1)},
                     {map.fwidth() / 2, 0, map.fheight() / 2});
             }
+#endif
 
-            // if (now - last_render >= 30ms) {
-            last_render = now;
-
+            spdlog::debug("dt: {}, fps: {}", dt, 1.F / dt);
 #ifndef USE_ECS
             map.render(shader, player_shader, render_barrier);
 #else
             world.update(dt, t); // TODO(shelpam): Integrating
+            last_frame = now;
 #endif
-            // }
         }
     }
     Window::deinitialize();

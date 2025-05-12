@@ -13,7 +13,6 @@ void Component_manager::remove(Entity id)
 
     storage<Transform>().remove(id);
     storage<Velocity>().remove(id);
-    storage<Intent_to_fire>().remove(id);
     storage<Renderable>().remove(id);
     storage<components::Weapon>().remove(id);
     storage<components::Expirable>().remove(id);

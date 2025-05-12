@@ -20,9 +20,6 @@ struct Velocity {
     float linear;
     float angular;
 };
-struct Intent_to_fire {
-    bool active;
-};
 
 struct Renderable {
     Mesh *mesh;
@@ -34,6 +31,7 @@ struct Weapon {
     float fire_rate;
     float bullet_speed;
     float cooldown;
+    bool active;
 };
 
 struct Expirable {
